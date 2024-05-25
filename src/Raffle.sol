@@ -70,7 +70,7 @@ contract Raffle is VRFConsumerBaseV2 {
     }
 
     function enterRaffle() external payable {
-        if (msg.value >= i_entranceFee) {
+        if (msg.value < i_entranceFee) {
             revert Raffle__NotEnoughEthSent();
         }
         if (s_raffleState != RaffleState.OPEN) {
@@ -137,5 +137,13 @@ contract Raffle is VRFConsumerBaseV2 {
      */
     function getEntranceFee() external view returns (uint256) {
         return i_entranceFee;
+    }
+
+    function getRaffleState() external view returns (RaffleState) {
+        return s_raffleState;
+    }
+
+    function getPlayer(uint256 index) external view returns (address) {
+        return s_players[index];
     }
 }
