@@ -6,6 +6,7 @@ import {Raffle} from "../../src/Raffle.sol";
 import {DeployRaffle} from "../../script/DeployRaffle.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {Vm} from "forge-std/Vm.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
 contract RaffleTest is Test {
     event EnterRaffle(address indexed player);
@@ -168,5 +169,43 @@ contract RaffleTest is Test {
 
         Raffle.RaffleState rState = raffle.getRaffleState();
         assert(uint256(rState) == 1);
+    }
+
+    /**
+     * fulfillRandomWords
+     */
+    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(uint256 randomRequestId)
+        public
+        raffleEnteredAndTimePassed
+    {
+        vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector);
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(randomRequestId, address(raffle));
+    }
+
+    function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney() public raffleEnteredAndTimePassed {
+        uint256 additionalEntrants = 5;
+        uint256 startingIndex = 1;
+        for (uint256 i = startingIndex; i < startingIndex + additionalEntrants; i++) {
+            address player = address(uint160(i));
+            hoax(player, START_PLAYER_BALANCE);
+            raffle.enterRaffle{value: entranceFee}();
+        }
+
+        vm.recordLogs();
+        raffle.performUpkeep("");
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        //RequestRaffleWinner是触发的第二个事件，所以用entries[1]
+        //topics[0]代表整个事件
+        bytes32 requestId = entries[1].topics[1];
+        assert(uint256(requestId) > 0);
+        uint256 previousTimeStamp = raffle.getLastTimeStamp();
+        //pretending the chainlink node is giving us a random number
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(uint256(requestId), address(raffle));
+
+        assert(uint256(raffle.getRaffleState()) == 0);
+        assert(raffle.getRecentWinner() != address(0));
+        assert(raffle.getPlayersLength() == 0);
+        assert(raffle.getLastTimeStamp() > previousTimeStamp);
+        assert(raffle.getRecentWinner().balance == START_PLAYER_BALANCE + entranceFee * (additionalEntrants));
     }
 }
