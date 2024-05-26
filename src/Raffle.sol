@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
-import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+//import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
+//import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+
+///// UPDATE IMPORTS TO V2.5 /////
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
 
 /**
  * @title 一个简单的抽奖合约示例
@@ -10,7 +14,7 @@ import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBa
  * @notice 此示例用于创建一个基于Chainlink VRFv2的抽奖合约
  * @dev 实现了Chainlink VRFv2接口
  */
-contract Raffle is VRFConsumerBaseV2 {
+contract Raffle is VRFConsumerBaseV2Plus {
     /**
      * Errors
      */
@@ -35,9 +39,9 @@ contract Raffle is VRFConsumerBaseV2 {
 
     uint256 private immutable i_entranceFee; // 抽奖费用
     uint256 private immutable i_interval; // 抽奖间隔
-    VRFCoordinatorV2Interface private immutable i_vrfCoordinator; // VRF协调器
+    //VRFCoordinatorV2Interface private immutable i_vrfCoordinator; // VRF协调器
     bytes32 private immutable i_gasLane; // Gas Lane标识
-    uint64 private immutable i_subscriptionId; // 订阅ID
+    uint256 private immutable i_subscriptionId; // 订阅ID
     uint32 private immutable i_callbackGasLimit; // 回调Gas限制
 
     address payable[] private s_players; // 参与者列表
@@ -56,12 +60,12 @@ contract Raffle is VRFConsumerBaseV2 {
         uint256 interval,
         address vrfCoordinator,
         bytes32 gasLane,
-        uint64 subscriptionId,
+        uint256 subscriptionId,
         uint32 callbackGasLimit
-    ) VRFConsumerBaseV2(vrfCoordinator) {
+    ) VRFConsumerBaseV2Plus(vrfCoordinator) {
         i_entranceFee = entranceFee;
         i_interval = interval;
-        i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinator);
+        //i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinator);
         i_gasLane = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
@@ -106,18 +110,29 @@ contract Raffle is VRFConsumerBaseV2 {
         }
         s_raffleState = RaffleState.CALCULATING;
         // Will revert if subscription is not set and funded.
-        i_vrfCoordinator.requestRandomWords(
-            i_gasLane, i_subscriptionId, REQUEST_CONFIRMATIONS, i_callbackGasLimit, NUM_WORDS
+        s_vrfCoordinator.requestRandomWords(
+            VRFV2PlusClient.RandomWordsRequest({
+                keyHash: i_gasLane,
+                subId: i_subscriptionId,
+                requestConfirmations: REQUEST_CONFIRMATIONS,
+                callbackGasLimit: i_callbackGasLimit,
+                numWords: NUM_WORDS,
+                extraArgs: VRFV2PlusClient._argsToBytes(
+                    VRFV2PlusClient.ExtraArgsV1({
+                        nativePayment: false
+                    })
+                )
+            })
         );
+//        i_vrfCoordinator.requestRandomWords(
+//            i_gasLane, i_subscriptionId, REQUEST_CONFIRMATIONS, i_callbackGasLimit, NUM_WORDS
+//        );
     }
 
     //随机数回调函数
     function fulfillRandomWords(
-        uint256,
-        /**
-         * _requestId
-         */
-        uint256[] memory _randomWords
+        uint256 /*_requestId*/,
+        uint256[] calldata _randomWords
     ) internal override {
         uint256 indexOfWinner = _randomWords[0] % s_players.length;
         address payable winner = s_players[indexOfWinner];

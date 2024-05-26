@@ -7,14 +7,17 @@ import {DeployRaffle} from "../../script/DeployRaffle.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
 contract RaffleTest is Test {
+    event EnterRaffle(address indexed player);
+
     Raffle private raffle;
     HelperConfig private helperConfig;
     uint256 private entranceFee;
     uint256 private interval;
     address private vrfCoordinator;
     bytes32 private gasLane;
-    uint64 private subscriptionId;
+    uint256 private subscriptionId;
     uint32 private callbackGasLimit;
+    address private link;
 
     address private PLAYER = makeAddr("player");
     uint256 private constant START_PLAYER_BALANCE = 10 ether;
@@ -22,7 +25,7 @@ contract RaffleTest is Test {
     function setUp() external {
         DeployRaffle deployer = new DeployRaffle();
         (raffle, helperConfig) = deployer.run();
-        (entranceFee, interval, vrfCoordinator, gasLane, subscriptionId, callbackGasLimit) =
+        (entranceFee, interval, vrfCoordinator, gasLane, subscriptionId, callbackGasLimit, link) =
             helperConfig.activeNetworkConfig();
         vm.deal(PLAYER, START_PLAYER_BALANCE);
     }
@@ -51,11 +54,12 @@ contract RaffleTest is Test {
     function testEmitsEventOnEntrance() public {
         vm.startPrank(PLAYER);
         vm.expectEmit(true, false, false, false, address(raffle));
-        emit Raffle.EnterRaffle(PLAYER);
+        emit EnterRaffle(PLAYER);
         raffle.enterRaffle{value: entranceFee}();
         vm.stopPrank();
     }
 
+    //todo InvalidConsumer()
     function testCantEnterWhenRaffleIsCalculating() public {
         vm.startPrank(PLAYER);
         raffle.enterRaffle{value: entranceFee}();
