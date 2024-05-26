@@ -14,8 +14,10 @@ contract HelperConfig is Script {
         uint256 subscriptionId;
         uint32 callbackGasLimit;
         address link;
+        uint256 deployerKey;
     }
-
+    uint256 public constant DEFAULT_ANVIL_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+    ;
     uint256 public constant SEPOLIA_CHAIN_ID = 11155111;
     NetworkConfig public activeNetworkConfig;
 
@@ -24,12 +26,12 @@ contract HelperConfig is Script {
             console.log("Using Sepolia ETH");
             activeNetworkConfig = getSepoliaEthConfig();
         } else {
-            console.log("Using Ganache ETH");
-            activeNetworkConfig = getOrCreateGanacheEthConfig();
+            console.log("Using Anvil ETH");
+            activeNetworkConfig = getOrCreateAnvilEthConfig();
         }
     }
 
-    function getSepoliaEthConfig() public pure returns (NetworkConfig memory) {
+    function getSepoliaEthConfig() public view returns (NetworkConfig memory) {
         //https://docs.chain.link/vrf/v2-5/supported-networks
         return NetworkConfig({
             entranceFee: 0.01 ether,
@@ -38,11 +40,12 @@ contract HelperConfig is Script {
             gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
             subscriptionId: 10404536840554839472755995080569833297743141827685573786500750992623312062789,
             callbackGasLimit: 500000,
-            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789
+            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
+            deployerKey: vm.envUint("SEPOLIA_PRIVATE_KEY")
         });
     }
 
-    function getOrCreateGanacheEthConfig() public returns (NetworkConfig memory) {
+    function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
         if (activeNetworkConfig.vrfCoordinator != address(0)) {
             return activeNetworkConfig;
         }
@@ -60,7 +63,8 @@ contract HelperConfig is Script {
             gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
             subscriptionId: 0,
             callbackGasLimit: 500000,
-            link: address(linkToken)
+            link: address(linkToken),
+            deployerKey: DEFAULT_ANVIL_KEY
         });
     }
 }

@@ -20,6 +20,7 @@ contract RaffleTest is Test {
     uint256 private subscriptionId;
     uint32 private callbackGasLimit;
     address private link;
+    uint256 private deployerKey;
 
     address private PLAYER = makeAddr("player");
     uint256 private constant START_PLAYER_BALANCE = 10 ether;
@@ -27,7 +28,7 @@ contract RaffleTest is Test {
     function setUp() external {
         DeployRaffle deployer = new DeployRaffle();
         (raffle, helperConfig) = deployer.run();
-        (entranceFee, interval, vrfCoordinator, gasLane, subscriptionId, callbackGasLimit, link) =
+        (entranceFee, interval, vrfCoordinator, gasLane, subscriptionId, callbackGasLimit, link,deployerKey) =
             helperConfig.activeNetworkConfig();
         vm.deal(PLAYER, START_PLAYER_BALANCE);
     }
@@ -124,6 +125,13 @@ contract RaffleTest is Test {
         assert(upkeepNeeded);
     }
 
+    modifier skipFork() {
+        if (block.chainid == 11155111) {
+            return;
+        }
+        _;
+    }
+
     /**
      * performUpkeep
      */
@@ -176,13 +184,13 @@ contract RaffleTest is Test {
      */
     function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(uint256 randomRequestId)
         public
-        raffleEnteredAndTimePassed
+        raffleEnteredAndTimePassed skipFork
     {
         vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector);
         VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(randomRequestId, address(raffle));
     }
 
-    function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney() public raffleEnteredAndTimePassed {
+    function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney() public raffleEnteredAndTimePassed skipFork{
         uint256 additionalEntrants = 5;
         uint256 startingIndex = 1;
         for (uint256 i = startingIndex; i < startingIndex + additionalEntrants; i++) {
