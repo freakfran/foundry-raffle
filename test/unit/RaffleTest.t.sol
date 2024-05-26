@@ -59,7 +59,6 @@ contract RaffleTest is Test {
         vm.stopPrank();
     }
 
-    //todo InvalidConsumer()
     function testCantEnterWhenRaffleIsCalculating() public {
         vm.startPrank(PLAYER);
         raffle.enterRaffle{value: entranceFee}();
