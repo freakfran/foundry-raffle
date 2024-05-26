@@ -54,6 +54,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
      */
     event EnterRaffle(address indexed player);
     event WinnerPicked(address indexed winner);
+    event RequestRaffleWinner(uint256 indexed requestId);
 
     constructor(
         uint256 entranceFee,
@@ -110,7 +111,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         }
         s_raffleState = RaffleState.CALCULATING;
         // Will revert if subscription is not set and funded.
-        s_vrfCoordinator.requestRandomWords(
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(
             VRFV2PlusClient.RandomWordsRequest({
                 keyHash: i_gasLane,
                 subId: i_subscriptionId,
@@ -120,9 +121,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
                 extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: false}))
             })
         );
-        //        i_vrfCoordinator.requestRandomWords(
-        //            i_gasLane, i_subscriptionId, REQUEST_CONFIRMATIONS, i_callbackGasLimit, NUM_WORDS
-        //        );
+
+        //redundant,for study
+        emit RequestRaffleWinner(requestId);
     }
 
     //随机数回调函数
